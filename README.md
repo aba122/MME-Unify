@@ -2,7 +2,7 @@
 
 <font size=7><div align='center' >  
 [[📖 arXiv Paper](https://arxiv.org/abs/2502.10391)] 
-[[📊 MM-Unify Data](https://huggingface.co/datasets/wulin222/MME-Unify)] 
+[[📊 MME-Unify Data](https://huggingface.co/datasets/wulin222/MME-Unify)] 
 [[📝 Homepage](https://aba122.github.io/MME-Unify.github.io/)] 
 
 </div></font>
@@ -77,7 +77,7 @@ Unify_Dataset
 ### Evaluate ###
 To extract the answer and calculate the scores, we add the model response to a JSON file. Here we provide an example template [output_test_template.json](./evaluation/output_test_template.json). Once you have prepared the model responses in this format, please refer to the evaluation scripts in:
 ```bash
-MME-Unify/Evaluate
+MME-Unify/evaluate
 ```
 
 ## Citation
