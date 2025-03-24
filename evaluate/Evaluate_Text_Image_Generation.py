@@ -13,14 +13,11 @@ from torch.nn.functional import adaptive_avg_pool2d
 class InceptionV3Features:
     def __init__(self, device='cuda'):
         self.device = device
-        # 加载预训练的 InceptionV3 模型
         self.model = models.inception_v3(pretrained=True, transform_input=False)
         self.model.to(device)
         self.model.eval()
-        # 去掉最后的分类层，只保留特征提取部分
         self.model.fc = torch.nn.Identity()
         
-        # 图像预处理
         self.preprocess = transforms.Compose([
             transforms.Resize(299),
             transforms.CenterCrop(299),
@@ -31,7 +28,6 @@ class InceptionV3Features:
 
     @torch.no_grad()
     def get_features(self, image_path):
-        """提取单张图像的特征"""
         try:
             img = Image.open(image_path).convert('RGB')
             img = self.preprocess(img).unsqueeze(0).to(self.device)
@@ -140,7 +136,6 @@ class TextImageEvaluator:
             return None
 
     def compute_fid(self, real_features, fake_features):
-        """计算FID分数"""
         try:
             mu1, sigma1 = np.mean(real_features, axis=0), np.cov(real_features, rowvar=False)
             mu2, sigma2 = np.mean(fake_features, axis=0), np.cov(fake_features, rowvar=False)
@@ -168,7 +163,6 @@ def evaluate_generations(json_path, output_base_path="", reference_base_path="")
     text_image_entries = [entry for entry in data if entry["category"] == "Text-Image_Generation"]
     os.makedirs("evaluation_results", exist_ok=True)
     
-    # 收集所有图像特征用于FID计算
     real_features = []
     fake_features = []
     
@@ -182,7 +176,6 @@ def evaluate_generations(json_path, output_base_path="", reference_base_path="")
                 print(f"Skipping entry due to missing files:\nOutput: {output_path}\nReference: {reference_path}")
                 continue
             
-            # 提取特征
             real_feat = evaluator.inception.get_features(reference_path)
             fake_feat = evaluator.inception.get_features(output_path)
             
@@ -194,7 +187,6 @@ def evaluate_generations(json_path, output_base_path="", reference_base_path="")
             print(f"Error processing entry for FID: {e}")
             continue
     
-    # 计算总体FID分数
     real_features = np.stack(real_features)
     fake_features = np.stack(fake_features)
     fid_score = evaluator.compute_fid(real_features, fake_features)
@@ -209,7 +201,6 @@ def evaluate_generations(json_path, output_base_path="", reference_base_path="")
             if not os.path.exists(output_path) or not os.path.exists(reference_path):
                 continue
             
-            # 计算各项指标
             clip_i = evaluator.compute_clip_image_similarity(output_path, reference_path)
             clip_t = evaluator.compute_clip_text_similarity(output_path, text_prompt)
             lpips_d = evaluator.compute_lpips_distance(output_path, reference_path)
@@ -230,7 +221,6 @@ def evaluate_generations(json_path, output_base_path="", reference_base_path="")
             print(f"Error processing entry: {e}")
             continue
     
-    # 计算平均指标
     avg_metrics = {
         "CLIP-I": np.mean([r["metrics"]["CLIP-I"] for r in results if r["metrics"]["CLIP-I"] is not None]),
         "CLIP-T": np.mean([r["metrics"]["CLIP-T"] for r in results if r["metrics"]["CLIP-T"] is not None]),
@@ -238,7 +228,6 @@ def evaluate_generations(json_path, output_base_path="", reference_base_path="")
         "FID": fid_score
     }
     
-    # 保存结果
     output_results = {
         "individual_results": results,
         "average_metrics": avg_metrics

@@ -19,31 +19,25 @@ def load_image(image_path: str) -> Optional[Image.Image]:
 def calculate_clip_similarity(model, processor, image1_path: str, image2_path: str) -> float:
     """Calculate CLIP similarity between two images."""
     try:
-        # Load images
         image1 = load_image(image1_path)
         image2 = load_image(image2_path)
         
         if image1 is None or image2 is None:
             return 0.0
 
-        # Process images
         inputs1 = processor(images=image1, return_tensors="pt")
         inputs2 = processor(images=image2, return_tensors="pt")
 
-        # Move to device
         inputs1 = {k: v.to(model.device) for k, v in inputs1.items()}
         inputs2 = {k: v.to(model.device) for k, v in inputs2.items()}
 
-        # Get image features
         with torch.no_grad():
             features1 = model.get_image_features(**inputs1)
             features2 = model.get_image_features(**inputs2)
 
-        # Normalize features
         features1 = features1 / features1.norm(dim=-1, keepdim=True)
         features2 = features2 / features2.norm(dim=-1, keepdim=True)
 
-        # Calculate similarity
         similarity = (features1 @ features2.T).item()
         
         return similarity
@@ -56,14 +50,12 @@ def evaluate_text_answer(item: Dict) -> Tuple[bool, bool]:
     Evaluate text answer for a single item.
     Returns: (is_valid, is_correct)
     """
-    # Check if output exists and is a dict
     if 'output' not in item or not isinstance(item['output'], dict):
         return False, False
         
     output = item['output']
     prediction = output.get('selected_answer')
     
-    # Skip if prediction is missing or empty
     if not prediction or (isinstance(prediction, str) and prediction.strip() == ''):
         return False, False
         
@@ -78,18 +70,15 @@ def evaluate_image_prediction(item: Dict, model, processor, base_path: str) -> T
     Evaluate image prediction for a single item.
     Returns: (is_valid, is_correct)
     """
-    # Check if output exists and is a dict
     if 'output' not in item or not isinstance(item['output'], dict):
         return False, False
         
     output = item['output']
     output_image = output.get('difference_image')
     
-    # Skip if output image is missing or doesn't exist
     if not output_image or not os.path.exists(output_image):
         return False, False
         
-    # Check image similarity
     data = item.get('data', {})
     reference_images = {
         "img_diff_a": data.get("img_diff_a", ""),
@@ -122,7 +111,6 @@ def evaluate_results(input_json: str, base_path: str) -> Dict:
     """
     Evaluate text answers and image predictions, including combined accuracy.
     """
-    # Load CLIP model and processor
     print("Loading CLIP model...")
     model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
     processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
@@ -130,14 +118,12 @@ def evaluate_results(input_json: str, base_path: str) -> Dict:
     model = model.to(device)
     print(f"Using device: {device}")
 
-    # Load results
     print(f"Loading results from {input_json}")
     with open(input_json, 'r') as f:
         results = json.load(f)
 
     total_samples = len(results)
     
-    # Initialize counters
     text_metrics = {
         'valid_samples': 0,
         'correct': 0,
@@ -156,7 +142,6 @@ def evaluate_results(input_json: str, base_path: str) -> Dict:
         'skipped': 0
     }
     
-    # Process each sample
     for item in tqdm(results, desc="Evaluating samples"):
         # Evaluate text answer
         text_valid, text_correct = evaluate_text_answer(item)
@@ -184,12 +169,10 @@ def evaluate_results(input_json: str, base_path: str) -> Dict:
         else:
             combined_metrics['skipped'] += 1
 
-    # Calculate accuracies using total samples as denominator
     text_accuracy = (text_metrics['correct'] / total_samples * 100)
     image_accuracy = (image_metrics['correct'] / total_samples * 100)
     combined_accuracy = (combined_metrics['correct'] / total_samples * 100)
 
-    # Prepare results
     evaluation_results = {
         'total_samples': total_samples,
         'text_metrics': {
@@ -212,7 +195,6 @@ def evaluate_results(input_json: str, base_path: str) -> Dict:
         }
     }
 
-    # Print results
     print("\nEvaluation Results:")
     print(f"Total samples: {total_samples}")
     print("\nText Metrics:")

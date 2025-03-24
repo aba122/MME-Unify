@@ -14,19 +14,15 @@ from collections import defaultdict
 class ImageEvaluator:
     def __init__(self):
         self.device = "cuda:1" if torch.cuda.is_available() else "cpu"
-        # 初始化LPIPS模型
         self.lpips_model = lpips.LPIPS(net='alex').to(self.device)
-        # 初始化CLIP模型和处理器
         self.clip_model = CLIPModel.from_pretrained("/data/xwl/xwl_data/.cache/clip-vit-large-patch14").to(self.device)
         self.clip_processor = CLIPProcessor.from_pretrained("/data/xwl/xwl_data/.cache/clip-vit-large-patch14")
         self.base_path = "/data/xwl/xwl_data/decode_images"
         
     def load_and_preprocess_image(self, image_path: str, is_output: bool = False) -> torch.Tensor:
-        """加载并预处理图像"""
         if not image_path:
             return None
             
-        # 根据是否是输出图像决定路径
         full_path = image_path if is_output else os.path.join(self.base_path, image_path.lstrip('/'))
         
         if not os.path.exists(full_path):
@@ -41,23 +37,18 @@ class ImageEvaluator:
             return None
 
     def resize_images(self, img1: torch.Tensor, img2: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """调整图像大小使其匹配"""
         if img1.shape != img2.shape:
-            # 获取目标尺寸（使用较小的尺寸）
             target_size = (
                 min(img1.shape[2], img2.shape[2]),
                 min(img1.shape[3], img2.shape[3])
             )
             
-            # 调整两张图片到相同大小
             img1 = interpolate(img1, size=target_size, mode='bilinear', align_corners=False)
             img2 = interpolate(img2, size=target_size, mode='bilinear', align_corners=False)
             
         return img1, img2
 
     def calculate_psnr(self, img1: torch.Tensor, img2: torch.Tensor) -> float:
-        """计算PSNR值"""
-        # 首先确保图像大小相同
         img1, img2 = self.resize_images(img1, img2)
         mse = mse_loss(img1, img2).item()
         if mse == 0:
@@ -65,49 +56,39 @@ class ImageEvaluator:
         return 20 * math.log10(1.0 / math.sqrt(mse))
 
     def calculate_lpips(self, img1: torch.Tensor, img2: torch.Tensor) -> float:
-        """计算LPIPS值"""
-        # 首先确保图像大小相同
         img1, img2 = self.resize_images(img1, img2)
         with torch.no_grad():
             return self.lpips_model(img1, img2).item()
 
     def calculate_clip_similarity(self, img: torch.Tensor, text: str = None) -> float:
-        """计算CLIP相似度"""
         with torch.no_grad():
-            # 将tensor转换为PIL Image
             img_pil = transforms.ToPILImage()(img.squeeze(0))
             
             if text:
-                # 处理图像和文本，设置最大长度为77
                 inputs = self.clip_processor(
                     images=img_pil,
                     text=text,
                     return_tensors="pt",
                     padding=True,
-                    max_length=77,  # CLIP的最大文本长度
-                    truncation=True  # 超长时截断
+                    max_length=77,  
+                    truncation=True  
                 ).to(self.device)
                 
-                # 获取图像和文本特征
                 outputs = self.clip_model(**inputs)
                 
-                # 计算相似度
                 logits_per_image = outputs.logits_per_image
                 similarity = logits_per_image[0][0].item()
                 return similarity
             else:
-                # 只处理图像
                 inputs = self.clip_processor(
                     images=img_pil,
                     return_tensors="pt"
                 ).to(self.device)
-                
-                # 获取图像特征
+
                 image_features = self.clip_model.get_image_features(**inputs)
                 return image_features
 
     def evaluate_reconstruction(self, output_path: str, target_path: str) -> Dict:
-        """评估图像重建任务"""
         output_img = self.load_and_preprocess_image(output_path, is_output=True)
         target_img = self.load_and_preprocess_image(target_path, is_output=False)
         
@@ -120,22 +101,18 @@ class ImageEvaluator:
         }
 
     def evaluate_editing(self, output_path: str, target_path: str, prompt: str) -> Dict:
-        """评估图像编辑任务"""
         output_img = self.load_and_preprocess_image(output_path, is_output=True)
         target_img = self.load_and_preprocess_image(target_path, is_output=False)
         
         if output_img is None or target_img is None:
             return None
             
-        # 调整图像大小使其匹配
         output_img, target_img = self.resize_images(output_img, target_img)
             
-        # 计算图像-图像CLIP相似度
         output_features = self.calculate_clip_similarity(output_img)
         target_features = self.calculate_clip_similarity(target_img)
         clip_i = torch.cosine_similarity(output_features, target_features, dim=1).item()
         
-        # 计算图像-文本CLIP相似度
         clip_t = self.calculate_clip_similarity(output_img, prompt)
         
         return {
@@ -144,25 +121,20 @@ class ImageEvaluator:
         }
 
     def evaluate_generation(self, output_path: str, target_path: str, prompt: str) -> Dict:
-        """评估图像生成任务"""
         output_img = self.load_and_preprocess_image(output_path, is_output=True)
         target_img = self.load_and_preprocess_image(target_path, is_output=False)
         
         if output_img is None or target_img is None:
             return None
             
-        # 调整图像大小使其匹配
         output_img, target_img = self.resize_images(output_img, target_img)
             
-        # 计算图像-图像CLIP相似度
         output_features = self.calculate_clip_similarity(output_img)
         target_features = self.calculate_clip_similarity(target_img)
         clip_i = torch.cosine_similarity(output_features, target_features, dim=1).item()
         
-        # 计算图像-文本CLIP相似度
         clip_t = self.calculate_clip_similarity(output_img, prompt)
         
-        # 计算LPIPS-D (domain-specific LPIPS)
         lpips_d = self.calculate_lpips(output_img, target_img)
         
         return {
@@ -174,17 +146,14 @@ class ImageEvaluator:
 def main():
     evaluator = ImageEvaluator()
     
-    # 读取JSON文件
     with open('/data/xwl/xwl_code/Unify_Benchmark/results/Generation/OmniGen/result.json', 'r') as f:
         data = json.load(f)
     
-    # 用于存储每个类别的评估结果
     results = defaultdict(list)
     
     total_samples = len(data)
     processed_samples = 0
     
-    # 处理每个样本
     for item in data:
         category = item['category']
 
@@ -229,7 +198,6 @@ def main():
         if processed_samples % 100 == 0:
             print(f"Processed {processed_samples}/{total_samples} samples")
     
-    # 计算并打印平均指标
     print("\nAverage Metrics per Category:")
     print("-" * 50)
     

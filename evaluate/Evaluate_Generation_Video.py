@@ -24,23 +24,21 @@ def extract_keyframes(video_path: str,
                       min_scene_change: float = 20.0,
                       use_uniform_fallback: bool = True) -> List[str]:
     """
-    从MP4视频中提取关键帧。尝试检测场景变化，如果检测到的关键帧不足，则使用均匀采样补充。
-    
+    Extract keyframes from an MP4 video. Try to detect scene changes. If insufficient keyframes are detected, use uniform sampling to supplement.
+
     Args:
-        video_path (str): MP4文件的路径
-        output_dir (str, optional): 保存关键帧的目录。如果为None，将在视频所在目录创建一个文件夹
-        num_frames (int, optional): 要提取的帧数，默认为16
-        min_scene_change (float, optional): 最小场景变化阈值，数值越大，检测到的场景变化越少。默认为20.0
-        use_uniform_fallback (bool, optional): 如果检测到的关键帧不足，是否使用均匀采样补充。默认为True
-        
+    video_path (str): Path to the MP4 file
+    output_dir (str, optional): Directory to save keyframes. If None, a folder will be created in the same directory as the video
+    num_frames (int, optional): Number of frames to extract, default is 16
+    min_scene_change (float, optional): Minimum scene change threshold, the larger the value, the fewer scene changes are detected. Default is 20.0
+    use_uniform_fallback (bool, optional): If insufficient keyframes are detected, whether to use uniform sampling to supplement. Default is True
+
     Returns:
-        List[str]: 提取的关键帧图像文件路径列表
+    List[str]: List of extracted keyframe image file paths
     """
-    # 检查视频文件是否存在
     if not os.path.isfile(video_path):
         raise FileNotFoundError(f"视频文件不存在: {video_path}")
     
-    # 准备输出目录
     if output_dir is None:
         video_dir = os.path.dirname(video_path)
         video_name = os.path.splitext(os.path.basename(video_path))[0]
@@ -48,38 +46,31 @@ def extract_keyframes(video_path: str,
     
     os.makedirs(output_dir, exist_ok=True)
     
-    # 打开视频文件
     cap = cv2.VideoCapture(video_path)
     
-    # 检查视频是否成功打开
     if not cap.isOpened():
-        raise ValueError(f"无法打开视频文件: {video_path}")
+        raise ValueError(f"Unable to open video file: {video_path}")
     
-    # 获取视频信息
     fps = cap.get(cv2.CAP_PROP_FPS)
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     
     if frame_count == 0:
-        raise ValueError(f"视频帧数为0: {video_path}")
+        raise ValueError(f"The number of video frames is 0: {video_path}")
     
-    print(f"视频 {video_path} 的帧率: {fps}, 总帧数: {frame_count}")
+    print(f"Frame rate of video {video_path} : {fps}, total frame count: {frame_count}")
     
-    # 初始化变量
     prev_frame = None
     keyframes = []
     keyframe_indices = []
     frame_idx = 0
     
-    # 使用帧差法检测场景变化
     while True:
         ret, frame = cap.read()
         if not ret:
             break
         
-        # 转换为灰度图像用于比较
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # 第一帧必定是关键帧
         if prev_frame is None:
             keyframe_path = os.path.join(output_dir, f"keyframe_{frame_idx:04d}.jpg")
             cv2.imwrite(keyframe_path, frame)
@@ -87,12 +78,9 @@ def extract_keyframes(video_path: str,
             keyframe_indices.append(frame_idx)
             prev_frame = gray
         else:
-            # 计算当前帧与前一帧的差异
             frame_diff = cv2.absdiff(gray, prev_frame)
-            # 计算平均差异值 (0-255)
             mean_diff = np.mean(frame_diff)
             
-            # 如果差异超过阈值，认为是场景变化
             if mean_diff > min_scene_change:
                 keyframe_path = os.path.join(output_dir, f"keyframe_{frame_idx:04d}.jpg")
                 cv2.imwrite(keyframe_path, frame)
@@ -103,21 +91,16 @@ def extract_keyframes(video_path: str,
         
         frame_idx += 1
     
-    # 释放视频资源
     cap.release()
     
-    # 如果检测到的关键帧数量不足且允许使用均匀采样
     if len(keyframes) < num_frames and use_uniform_fallback:
-        print(f"使用场景变化检测到 {len(keyframes)} 个关键帧，不足 {num_frames} 个，将使用均匀采样补充")
+        print(f"Usage Scenario change If {len(keyframes)} is detected but {num_frames} is insufficient, uniform sampling will be used to replenish them")
         
-        # 清空已检测的关键帧
         keyframes = []
         keyframe_indices = []
         
-        # 重新打开视频
         cap = cv2.VideoCapture(video_path)
         
-        # 均匀采样指定数量的帧
         sample_indices = np.linspace(0, frame_count - 1, num_frames, dtype=int)
         current_frame = 0
         
@@ -135,21 +118,21 @@ def extract_keyframes(video_path: str,
             current_frame += 1
                 
         cap.release()
-    # 如果场景变化检测到的关键帧数量过多，则均匀选择指定数量
+
     elif len(keyframes) > num_frames:
-        print(f"使用场景变化检测到 {len(keyframes)} 个关键帧，超过 {num_frames} 个，将均匀选择")
+        print(f"Usage Scenario change If {len(keyframes)} is detected, if {num_frames} is exceeded, the system selects even frames")
         
         selected_indices = np.linspace(0, len(keyframes) - 1, num_frames, dtype=int)
         keyframes = [keyframes[i] for i in selected_indices]
         keyframe_indices = [keyframe_indices[i] for i in selected_indices]
     
-    print(f"最终提取了 {len(keyframes)} 个关键帧")
+    print(f"Finally, {len(keyframes)} keyframes were extracted")
     
     # 打印关键帧在视频中的位置（时间戳）
     if fps > 0:
         keyframe_times = [idx / fps for idx in keyframe_indices]
         for i, (idx, time) in enumerate(zip(keyframe_indices, keyframe_times)):
-            print(f"关键帧 {i+1}: 帧 {idx}, 时间 {time:.2f}s")
+            print(f"Key frame {i+1}: frame {idx}, time {time:.2f}s")
     
     return keyframes
 
@@ -159,7 +142,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class InceptionV3FeatureExtractor(nn.Module):
-    """用于FID计算的InceptionV3特征提取器"""
     def __init__(self):
         super().__init__()
         inception = models.inception_v3(pretrained=True)
@@ -182,7 +164,6 @@ class InceptionV3FeatureExtractor(nn.Module):
         return features.reshape(features.shape[0], -1)
 
 class ResNetFeatureExtractor(nn.Module):
-    """用于FVD计算的ResNet特征提取器"""
     def __init__(self):
         super().__init__()
         resnet = models.resnet50(pretrained=True)
@@ -198,7 +179,6 @@ class ResNetFeatureExtractor(nn.Module):
         return features
 
 class CLIPMetrics:
-    """计算CLIP相似度的类"""
     def __init__(self):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = CLIPModel.from_pretrained("/data/xwl/xwl_data/.cache/clip-vit-large-patch14").to(self.device)
@@ -207,7 +187,6 @@ class CLIPMetrics:
     def calculate_similarity(self, image_path: str, text_prompt: str) -> float:
         try:
             image = Image.open(image_path).convert('RGB')
-            # 文本长度限制处理
             if len(text_prompt.split()) > 70:
                 logger.warning(f"Text prompt too long, truncating: {text_prompt[:100]}...")
                 text_prompt = ' '.join(text_prompt.split()[:70])
@@ -259,7 +238,7 @@ class VideoMetricsCalculator:
     @staticmethod
     def normalize_scores(scores: List[float]) -> List[float]:
         """
-        将一组原始分数归一化到0-100范围，最优（最小值）对应100，最差（最大值）对应0
+        Normalize a set of raw scores to the 0-100 range, where the best (minimum) corresponds to 100 and the worst (maximum) corresponds to 0
         """
         arr = np.array(scores)
         if arr.max() == arr.min():
@@ -354,11 +333,6 @@ class VideoMetricsCalculator:
         return np.concatenate(features_list, axis=0)
 
     def calculate_fid(self, real_features: np.ndarray, gen_features: np.ndarray) -> float:
-        """
-        计算FID分数，支持单帧比较
-        对于单帧比较，只计算特征向量之间的欧氏距离
-        对于多帧比较，计算完整的FID
-        """
         try:
             if real_features.ndim == 1:
                 real_features = real_features.reshape(1, -1)
@@ -402,7 +376,7 @@ class VideoMetricsCalculator:
             "per_frame_fid_scores": []
         }
         
-        sample_fvd_scores = []  # 存储每个样本的FVD
+        sample_fvd_scores = [] 
         
         for idx, item in tqdm(enumerate(i2v_data), total=len(i2v_data)):
             try:
@@ -415,7 +389,6 @@ class VideoMetricsCalculator:
                 video_path = f"{mp4_prefix.rstrip('/')}/{item['data']['video'].lstrip('/')}"
                 text_prompt = item.get('Text_Prompt', '')
                 
-                # 计算每一帧的FID
                 try:
                     source_features = self.extract_inception_features([source_image_path])
                     frame_fid_scores = []
@@ -437,7 +410,6 @@ class VideoMetricsCalculator:
                 except Exception as e:
                     logger.error(f"Error processing source image {source_image_path}: {e}")
 
-                # 计算FVD（针对该视频样本）
                 try:
                     gen_video = self.load_frame_sequence(gen_frames)
                     real_video = self.load_and_sample_mp4(video_path, len(gen_frames))
@@ -476,7 +448,7 @@ class VideoMetricsCalculator:
             "per_frame_fid_scores": []
         }
         
-        sample_fvd_scores = []  # 存储每个样本的FVD
+        sample_fvd_scores = []  
         
         for idx, item in tqdm(enumerate(i2v_data), total=len(i2v_data)):
             try:
@@ -489,7 +461,6 @@ class VideoMetricsCalculator:
                 video_path = f"{mp4_prefix.rstrip('/')}/{item['data']['video'].lstrip('/')}"
                 text_prompt = item.get('Text_Prompt', '')
                 
-                # 计算每一帧的FID
                 try:
                     source_features = self.extract_inception_features([source_image_path])
                     frame_fid_scores = []
@@ -511,7 +482,6 @@ class VideoMetricsCalculator:
                 except Exception as e:
                     logger.error(f"Error processing source image {source_image_path}: {e}")
                 
-                # 计算CLIP相似度
                 frame_clip_scores = []
                 for frame_path in gen_frames:
                     clip_score = self.clip_metrics.calculate_similarity(frame_path, text_prompt)
@@ -524,7 +494,6 @@ class VideoMetricsCalculator:
                         "mean_score": np.mean(frame_clip_scores)
                     })
                 
-                # 计算FVD（针对该视频样本）
                 try:
                     gen_video = self.load_frame_sequence(gen_frames)
                     real_video = self.load_and_sample_mp4(video_path, len(gen_frames))
@@ -553,7 +522,6 @@ class VideoMetricsCalculator:
         return results
 
     def process_text_to_video(self, data: List[Dict], mp4_prefix: str) -> Dict:
-        """处理文本到视频生成的评估"""
         t2v_data = [item for item in data if item.get('category') == 'Text-to-Video_Generation']
         
         results = {
@@ -563,7 +531,7 @@ class VideoMetricsCalculator:
             "clip_scores": []
         }
         
-        sample_fvd_scores = []  # 存储每个样本的FVD
+        sample_fvd_scores = []  
         
         for idx, item in tqdm(enumerate(t2v_data), total=len(t2v_data)):
             try:
@@ -575,7 +543,6 @@ class VideoMetricsCalculator:
                 mp4_path = f"{mp4_prefix.rstrip('/')}/{item['data']['image'].lstrip('/')}"
                 text_prompt = item.get('Text_Prompt', '')
                 
-                # 计算每一帧的CLIP相似度
                 frame_clip_scores = []
                 for frame_path in gen_frames:
                     clip_score = self.clip_metrics.calculate_similarity(frame_path, text_prompt)
@@ -588,7 +555,6 @@ class VideoMetricsCalculator:
                         "mean_score": np.mean(frame_clip_scores)
                     })
                 
-                # 计算FVD（针对该视频样本）
                 try:
                     gen_video = self.load_frame_sequence(gen_frames)
                     real_video = self.load_and_sample_mp4(mp4_path, len(gen_frames))

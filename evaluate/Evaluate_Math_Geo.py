@@ -16,18 +16,6 @@ class Evaluator:
         self.valid_choices = set(['A', 'B', 'C', 'D'])
         
     def calculate_metrics(self, data: List[Dict]) -> Dict[str, Dict]:
-        """
-        计算所有评估指标，包括：
-        - 选择题统计（总数、尝试数、跳过数、正确数、准确率）
-        - 图像统计（总数、尝试数、跳过数、正确数、准确率）
-        - 综合统计（总数、两者都尝试数、任一跳过数、两者都正确数、准确率）
-        
-        Args:
-            data: 评估数据列表
-            
-        Returns:
-            包含详细统计指标的字典
-        """
         total_samples = len(data)
         if total_samples == 0:
             return self._create_empty_metrics()
@@ -54,15 +42,12 @@ class Evaluator:
         }
         
         for item in data:
-            # 评估选择题答案
             choice_result = self._evaluate_choice(item)
             self._update_metrics(metrics['choice'], choice_result)
             
-            # 评估图像答案
             image_result = self._evaluate_image(item)
             self._update_metrics(metrics['image'], image_result)
             
-            # 更新组合指标
             if choice_result['attempted'] and image_result['attempted']:
                 metrics['combined']['attempted'] += 1
                 if choice_result['correct'] and image_result['correct']:
@@ -70,11 +55,9 @@ class Evaluator:
             else:
                 metrics['combined']['skipped'] += 1
 
-        # 计算最终结果
         return self._calculate_final_metrics(metrics, total_samples)
     
     def _create_empty_metrics(self) -> Dict[str, Dict]:
-        """创建空的指标统计结果"""
         empty_metrics = {
             'total_samples': 0,
             'choice_metrics': {
@@ -93,12 +76,6 @@ class Evaluator:
         return empty_metrics
 
     def _evaluate_choice(self, item: Dict) -> Dict[str, bool]:
-        """
-        评估单个选择题答案
-        
-        Returns:
-            Dict: 包含attempted和correct的评估结果
-        """
         result = {'attempted': False, 'correct': False}
         
         pred = item.get('output', {}).get('output_choice', '')
@@ -111,12 +88,6 @@ class Evaluator:
         return result
     
     def _evaluate_image(self, item: Dict) -> Dict[str, bool]:
-        """
-        评估单个图像答案
-        
-        Returns:
-            Dict: 包含attempted和correct的评估结果
-        """
         result = {'attempted': False, 'correct': False}
         
         output_image = item.get('output', {}).get('output_image', '')
@@ -124,7 +95,6 @@ class Evaluator:
             return result
             
         try:
-            # 获取所有辅助线图像路径
             aux_images = {
                 'main': os.path.join(IMAGE_BASE_PATH, item['data']['image_Auxiliary_lines']),
                 'neg1': os.path.join(IMAGE_BASE_PATH, item['data']['image_Auxiliary_lines_negative1']),
@@ -132,16 +102,13 @@ class Evaluator:
                 'neg3': os.path.join(IMAGE_BASE_PATH, item['data']['image_Auxiliary_lines_negative3'])
             }
             
-            # 检查文件是否存在
             if all(os.path.exists(path) for path in aux_images.values()):
                 result['attempted'] = True
                 
-                # 计算与所有辅助线图像的相似度
                 similarities = {}
                 for name, path in aux_images.items():
                     similarities[name] = self.compute_clip_similarity(output_image, path)
                 
-                # 检查主辅助线图像是否相似度最高
                 if similarities:
                     result['correct'] = similarities['main'] == max(similarities.values())
                     print(f"Sample similarities: {similarities}")
@@ -152,7 +119,6 @@ class Evaluator:
         return result
     
     def _update_metrics(self, metrics: Dict, result: Dict[str, bool]) -> None:
-        """更新指标统计"""
         if result['attempted']:
             metrics['attempted'] += 1
             if result['correct']:
@@ -161,7 +127,6 @@ class Evaluator:
             metrics['skipped'] += 1
             
     def _calculate_final_metrics(self, metrics: Dict, total_samples: int) -> Dict:
-        """计算最终的评估指标"""
         results = {
             'total_samples': total_samples,
             'choice_metrics': {
@@ -192,35 +157,20 @@ class Evaluator:
         return results
     
     def compute_clip_similarity(self, image1_path: str, image2_path: str) -> float:
-        """
-        计算两张图片的CLIP相似度
-        
-        Args:
-            image1_path: 第一张图片路径
-            image2_path: 第二张图片路径
-            
-        Returns:
-            float: 相似度分数
-        """
         try:
-            # 检查图片是否存在
             if not os.path.exists(image1_path) or not os.path.exists(image2_path):
                 return 0.0
 
-            # 读取图片
             image1 = Image.open(image1_path)
             image2 = Image.open(image2_path)
 
-            # 处理图片
             inputs1 = self.processor(images=image1, return_tensors="pt").to(self.device)
             inputs2 = self.processor(images=image2, return_tensors="pt").to(self.device)
 
-            # 获取图像特征
             with torch.no_grad():
                 features1 = self.model.get_image_features(**inputs1)
                 features2 = self.model.get_image_features(**inputs2)
 
-            # 计算余弦相似度
             similarity = torch.nn.functional.cosine_similarity(features1, features2).item()
             
             return similarity
@@ -229,10 +179,8 @@ class Evaluator:
             return 0.0
 
 def main():
-    # 初始化评估器
     evaluator = Evaluator()
     
-    # 读取JSON文件
     try:
         with open('/data/xwl/xwl_code/Unify_Benchmark/results/Math_Geo/MGM-7B/result.json', 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -240,10 +188,8 @@ def main():
         print(f"Error reading data file: {str(e)}")
         return
     
-    # 计算所有指标
     metrics = evaluator.calculate_metrics(data)
     
-    # 打印详细结果
     print("\nEvaluation Results:")
     print(f"Total samples: {metrics['total_samples']}")
     
@@ -265,7 +211,6 @@ def main():
     print(f"  Both correct: {metrics['combined_metrics']['correct']}")
     print(f"  Combined accuracy: {metrics['combined_metrics']['accuracy']:.2f}%")
     
-    # 保存结果
     output_path = 'evaluation_results.json'
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)

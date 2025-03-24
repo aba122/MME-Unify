@@ -6,7 +6,6 @@ import os
 from tqdm import tqdm
 
 def load_clip_model():
-    """加载CLIP模型"""
     print("Loading CLIP model...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
@@ -15,12 +14,10 @@ def load_clip_model():
     return model, processor
 
 def compute_text_similarity(model, processor, text1, text2_list):
-    """计算文本间的相似度"""
     if not text1 or not text2_list or not all(text2_list):
         return None
         
     try:
-        # 处理文本
         inputs = processor(
             text=[text1] + text2_list,
             return_tensors="pt",
@@ -28,17 +25,13 @@ def compute_text_similarity(model, processor, text1, text2_list):
             truncation=True
         )
         
-        # 移动到正确的设备
         inputs = {k: v.to(model.device) for k, v in inputs.items()}
         
-        # 获取文本特征
         text_features = model.get_text_features(**inputs)
         
-        # 计算相似度
         text1_feature = text_features[0]
         text2_features = text_features[1:]
         
-        # 计算余弦相似度
         similarities = torch.nn.functional.cosine_similarity(
             text1_feature.unsqueeze(0),
             text2_features,
@@ -51,30 +44,23 @@ def compute_text_similarity(model, processor, text1, text2_list):
         return None
 
 def compute_image_similarity(model, processor, image1_path, image2_paths):
-    """计算图像间的相似度"""
     try:
-        # 读取图像
         image1 = Image.open(image1_path).convert('RGB')
         image2_list = [Image.open(path).convert('RGB') for path in image2_paths]
         
-        # 处理图像
         inputs = processor(
             images=[image1] + image2_list,
             return_tensors="pt",
             padding=True
         )
         
-        # 移动到正确的设备
         inputs = {k: v.to(model.device) for k, v in inputs.items()}
         
-        # 获取图像特征
         image_features = model.get_image_features(**inputs)
         
-        # 计算相似度
         image1_feature = image_features[0]
         image2_features = image_features[1:]
         
-        # 计算余弦相似度
         similarities = torch.nn.functional.cosine_similarity(
             image1_feature.unsqueeze(0),
             image2_features,
@@ -87,12 +73,9 @@ def compute_image_similarity(model, processor, image1_path, image2_paths):
         return None
 
 def evaluate_results(json_path, base_path):
-    """评估结果"""
     try:
-        # 加载CLIP模型
         model, processor = load_clip_model()
         
-        # 加载JSON文件
         print(f"\nLoading results from {json_path}")
         with open(json_path, 'r') as f:
             results = json.load(f)
@@ -100,32 +83,30 @@ def evaluate_results(json_path, base_path):
         total_samples = len(results)
         print(f"Total samples: {total_samples}")
         
-        # 初始化评估指标
         metrics = {
             'text': {
                 'total': total_samples,
                 'attempted': 0,
                 'skipped': 0,
                 'correct': 0,
-                'failed': 0  # 处理失败的样本数
+                'failed': 0  
             },
             'image': {
                 'total': total_samples,
                 'attempted': 0,
                 'skipped': 0,
                 'correct': 0,
-                'failed': 0  # 处理失败的样本数
+                'failed': 0  
             },
             'combined': {
                 'total': total_samples,
                 'attempted': 0,
                 'skipped': 0,
                 'correct': 0,
-                'failed': 0  # 处理失败的样本数
+                'failed': 0  
             }
         }
         
-        # 首先打印一个样本的结构，用于调试
         print("\nDebug - First sample structure:")
         print(json.dumps(results[0], indent=2))
         
@@ -135,7 +116,7 @@ def evaluate_results(json_path, base_path):
                 'image': {'attempted': False, 'correct': False, 'failed': False}
             }
             
-            # 检查必需字段
+
             required_fields = {
                 'top_level': ['choice', 'answer', 'output', 'data'],
                 'output': ['output_explanation', 'output_image']
@@ -155,7 +136,6 @@ def evaluate_results(json_path, base_path):
                 print(f"\nSample {idx} missing fields: {missing_fields}")
                 continue
             
-            # 评估文本相似度
             try:
                 choices = sample['choice']
                 output_explanation = sample['output']['output_explanation']
@@ -174,7 +154,6 @@ def evaluate_results(json_path, base_path):
                 print(f"\nError in text evaluation for sample {idx}: {e}")
                 sample_metrics['text']['failed'] = True
             
-            # 评估图像相似度
             try:
                 output_image = sample['output']['output_image']
                 comparison_images = [
@@ -195,7 +174,6 @@ def evaluate_results(json_path, base_path):
                 print(f"\nError in image evaluation for sample {idx}: {e}")
                 sample_metrics['image']['failed'] = True
             
-            # 更新总体指标
             for task in ['text', 'image']:
                 if sample_metrics[task]['attempted']:
                     metrics[task]['attempted'] += 1
@@ -206,7 +184,6 @@ def evaluate_results(json_path, base_path):
                 else:
                     metrics[task]['skipped'] += 1
             
-            # 更新组合指标
             if sample_metrics['text']['attempted'] and sample_metrics['image']['attempted']:
                 metrics['combined']['attempted'] += 1
                 if sample_metrics['text']['correct'] and sample_metrics['image']['correct']:
@@ -216,7 +193,6 @@ def evaluate_results(json_path, base_path):
             else:
                 metrics['combined']['skipped'] += 1
         
-        # 计算最终结果（使用总样本数作为分母）
         results_dict = {
             'total_samples': total_samples,
             'text_metrics': {
@@ -254,7 +230,6 @@ def evaluate_results(json_path, base_path):
             }
         }
         
-        # 打印详细结果
         print("\nEvaluation Results:")
         print(f"Total samples: {total_samples}")
         
@@ -266,7 +241,6 @@ def evaluate_results(json_path, base_path):
             print(f"  Skipped: {metrics['skipped']} ({metrics['skip_rate']:.2f}%)")
             print(f"  Failed: {metrics['failed']} ({metrics['failure_rate']:.2f}%)")
         
-        # 保存结果
         output_path = 'evaluation_results.json'
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(results_dict, f, indent=2, ensure_ascii=False)
