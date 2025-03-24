@@ -18,7 +18,7 @@ Our findings reveal substantial performance gaps in existing U-MLLMs, highlighti
 
 
 <p align="center">
-    <img src="docs/Bin.png" width="100%" height="100%">
+    <img src="docs/Bin.png" width="100%" height="80%">
 </p>
 
 ## Dataset Examples
