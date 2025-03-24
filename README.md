@@ -1,8 +1,4 @@
-<p align="center" width="100%">
-<img src="docs/logo.png" alt="Example Image" width="25" style="margin-bottom:-8px"/> MME-RealWorld: Could Your Multimodal LLM Challenge High-Resolution Real-World Scenarios that are Difficult for Humans?
-</p>
-
-
+# MME-Unify: A Comprehensive Benchmark for Unified Multimodal Understanding and Generation
 
 <font size=7><div align='center' >  
 [[📖 arXiv Paper](https://arxiv.org/abs/2502.10391)] 
@@ -10,8 +6,6 @@
 [[📝 Homepage](https://aba122.github.io/MME-Unify.github.io/)] 
 
 </div></font>
-
-# A Comprehensive Benchmark for Unified Multimodal Understanding and Generation
 
 
 **[2025/02/10]** 🔥 We are proud to open-source **MM-Unify**, a comprehensive evaluation framework designed to systematically assess U-MLLMs. Our benchmark includes:
