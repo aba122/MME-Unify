@@ -63,12 +63,14 @@ class VisualCoTEvaluator:
         if output_step is None:
             return results
         
+        # Evaluate action
         if step_idx < len(data_step['Action']):
             results['action']['attempted'] = output_step.get('output_action') is not None
             results['action']['correct'] = (
                 output_step.get('output_action') == data_step['Action'][step_idx]
             )
         
+        # Evaluate location
         if step_idx < len(data_step['Coordinate']):
             output_loc = output_step.get('output_location')
             gt_loc = data_step['Coordinate'][step_idx]
@@ -79,6 +81,7 @@ class VisualCoTEvaluator:
                 all(a == b for a, b in zip(output_loc, gt_loc))
             )
         
+        # Evaluate image
         output_image = output_step.get('output_image')
         if output_image and gt_images:
             results['image']['attempted'] = True
@@ -111,13 +114,11 @@ class VisualCoTEvaluator:
         num_steps = len(data['Action'])
         step_results = []
         
-        # Evaluate each step
         for i in range(num_steps):
             output_step = outputs.get(f'output_step_{i}')
             step_result = self.evaluate_step(data, output_step, i, gt_images)
             step_results.append(step_result)
         
-        # Calculate overall sample results
         all_steps_attempted = all(
             r['action']['attempted'] and r['location']['attempted'] and r['image']['attempted']
             for r in step_results
@@ -139,7 +140,6 @@ class VisualCoTEvaluator:
         """Calculate various accuracy metrics"""
         total_samples = len(self.results)
         
-        # Initialize metrics structure
         metrics = {
             'overall': {
                 'total_samples': total_samples,
@@ -184,11 +184,13 @@ class VisualCoTEvaluator:
                     else:
                         step_metrics[aspect]['skipped'] += 1
         
+        # Calculate final metrics
         results = {
             'overall': {
                 'total_samples': total_samples,
                 'step_accuracies': {},
-                'subcategory_accuracies': {}
+                'subcategory_accuracies': {},
+                'average_accuracies': {}  
             }
         }
         
@@ -213,17 +215,61 @@ class VisualCoTEvaluator:
             results['overall']['subcategory_accuracies'][subcategory] = {
                 'total': data['total'],
                 'attempted': data['attempted'],
-                'attempted_rate': data['attempted'] / total_samples * 100,
+                'attempted_rate': data['attempted'] / data['total'] * 100 if data['total'] > 0 else 0,
                 'correct': data['correct'],
-                'accuracy': data['correct'] / total_samples * 100,
+                'accuracy': data['correct'] / data['total'] * 100 if data['total'] > 0 else 0,
                 'skipped': data['skipped'],
-                'skip_rate': data['skipped'] / total_samples * 100
+                'skip_rate': data['skipped'] / data['total'] * 100 if data['total'] > 0 else 0
             }
+        
+        total_action_steps = 0
+        total_location_steps = 0
+        total_image_steps = 0
+        
+        correct_action_steps = 0
+        correct_location_steps = 0
+        correct_image_steps = 0
+        
+        for step, data in metrics['overall']['step_metrics'].items():
+            total_action_steps += data['total']
+            total_location_steps += data['total']
+            total_image_steps += data['total']
+            
+            correct_action_steps += data['action']['correct']
+            correct_location_steps += data['location']['correct']
+            correct_image_steps += data['image']['correct']
+        
+        avg_action_accuracy = (correct_action_steps / total_action_steps * 100) if total_action_steps > 0 else 0
+        avg_location_accuracy = (correct_location_steps / total_location_steps * 100) if total_location_steps > 0 else 0
+        avg_image_accuracy = (correct_image_steps / total_image_steps * 100) if total_image_steps > 0 else 0
+        
+        overall_avg_accuracy = (avg_action_accuracy + avg_location_accuracy + avg_image_accuracy) / 3
+        
+        results['overall']['average_accuracies'] = {
+            'action': {
+                'avg_accuracy': avg_action_accuracy,
+                'correct_steps': correct_action_steps,
+                'total_steps': total_action_steps
+            },
+            'location': {
+                'avg_accuracy': avg_location_accuracy,
+                'correct_steps': correct_location_steps,
+                'total_steps': total_location_steps
+            },
+            'image': {
+                'avg_accuracy': avg_image_accuracy,
+                'correct_steps': correct_image_steps,
+                'total_steps': total_image_steps
+            },
+            'overall': {
+                'avg_accuracy': overall_avg_accuracy
+            }
+        }
         
         return results
 
 def main():
-    evaluator = VisualCoTEvaluator("/data/xwl/xwl_code/Unify_Benchmark/results/VSP/MGM-7B/result.json")
+    evaluator = VisualCoTEvaluator("/data/xwl/xwl_code/Unify_Benchmark/results/VSP/SEED-14B/result.json")
     
     results = evaluator.calculate_accuracies()
     
@@ -247,6 +293,13 @@ def main():
             print(f"    Correct: {metrics['correct']} ({metrics['accuracy']:.2f}%)")
             print(f"    Skipped: {metrics['skipped']} ({metrics['skip_rate']:.2f}%)")
     
+    print("\nOverall Accuracies (All Steps):")
+    print(f"  Action Accuracy: {results['overall']['average_accuracies']['action']['avg_accuracy']:.2f}% (Correct Steps: {results['overall']['average_accuracies']['action']['correct_steps']}/{results['overall']['average_accuracies']['action']['total_steps']})")
+    print(f"  Location Accuracy: {results['overall']['average_accuracies']['location']['avg_accuracy']:.2f}% (Correct Steps: {results['overall']['average_accuracies']['location']['correct_steps']}/{results['overall']['average_accuracies']['location']['total_steps']})")
+    print(f"  Image Accuracy: {results['overall']['average_accuracies']['image']['avg_accuracy']:.2f}% (Correct Steps: {results['overall']['average_accuracies']['image']['correct_steps']}/{results['overall']['average_accuracies']['image']['total_steps']})")
+    print(f"  Overall Average Accuracy: {results['overall']['average_accuracies']['overall']['avg_accuracy']:.2f}%")
+    
+    # Save results
     output_path = 'evaluation_results.json'
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(results, f, indent=2, ensure_ascii=False)

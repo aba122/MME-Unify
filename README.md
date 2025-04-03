@@ -3,7 +3,7 @@
 <font size=7><div align='center' >  
 [[📖 arXiv Paper](https://arxiv.org/abs/2502.10391)] 
 [[📊 MME-Unify Data](https://huggingface.co/datasets/wulin222/MME-Unify)] 
-[[📝 Homepage](https://aba122.github.io/MME-Unify.github.io/)] 
+[[📝 Homepage](https://mme-unify.github.io/)] 
 
 </div></font>
 

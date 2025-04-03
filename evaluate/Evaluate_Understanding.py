@@ -5,33 +5,19 @@ from collections import defaultdict
 from typing import Dict, List, Tuple
 
 def calculate_accuracy(predictions: List[Dict]) -> Tuple[float, Dict[str, float]]:
-    """
-    Calculate overall accuracy and accuracy for each category
-    
-    Args:
-        predictions: List containing prediction results
-    
-    Returns:
-        Overall accuracy and dictionary of accuracy per category
-    """
     total_correct = 0
-    total_count = 0
+    total_count = len(predictions)  
     
+    # 用于存储每个类别的统计信息
     category_stats = defaultdict(lambda: {'correct': 0, 'total': 0})
     
     for pred in predictions:
-        category = pred['category']
-        
-        if not pred.get('output'):
-            is_correct = False
-        else:
-            is_correct = pred['output'] == pred['answer']
-        
-        total_correct += int(is_correct)
-        total_count += 1
-        
-        category_stats[category]['correct'] += int(is_correct)
+        category = pred.get('category', 'unknown')
         category_stats[category]['total'] += 1
+        
+        if pred.get('output') and pred.get('output') == pred.get('answer'):
+            total_correct += 1
+            category_stats[category]['correct'] += 1
     
     overall_accuracy = total_correct / total_count if total_count > 0 else 0
     
@@ -43,26 +29,25 @@ def calculate_accuracy(predictions: List[Dict]) -> Tuple[float, Dict[str, float]
     return overall_accuracy, category_accuracy
 
 def main():
-    parser = argparse.ArgumentParser(description='Evaluate model prediction results')
-    parser.add_argument('input_file', help='Path to input JSON file')
+    # 设置命令行参数
+    parser = argparse.ArgumentParser(description='Evaluate result.')
+    parser.add_argument('input_file', help='Path of input file')
     args = parser.parse_args()
     
+    # 读取JSON文件
     try:
         with open(args.input_file, 'r', encoding='utf-8') as f:
             predictions = json.load(f)
     except FileNotFoundError:
-        print(f"Error: File '{args.input_file}' not found")
+        print(f"Can't find the file. '{args.input_file}'")
         return
     except json.JSONDecodeError:
-        print(f"Error: '{args.input_file}' is not a valid JSON file")
+        print(f"Error：'{args.input_file}' Not a vaild file")
         return
     
     overall_acc, category_acc = calculate_accuracy(predictions)
     
-    print("\n=== Evaluation Results ===")
-    print(f"\nOverall Accuracy: {overall_acc:.2%}")
-    
-    print("\nAccuracy by Category:")
+    print("\nAccuracy:")
     for category, acc in sorted(category_acc.items()):
         print(f"{category}: {acc:.2%}")
 

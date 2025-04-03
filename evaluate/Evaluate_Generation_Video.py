@@ -37,7 +37,7 @@ def extract_keyframes(video_path: str,
     List[str]: List of extracted keyframe image file paths
     """
     if not os.path.isfile(video_path):
-        raise FileNotFoundError(f"视频文件不存在: {video_path}")
+        raise FileNotFoundError(f"Video file not found: {video_path}")
     
     if output_dir is None:
         video_dir = os.path.dirname(video_path)
@@ -128,7 +128,6 @@ def extract_keyframes(video_path: str,
     
     print(f"Finally, {len(keyframes)} keyframes were extracted")
     
-    # 打印关键帧在视频中的位置（时间戳）
     if fps > 0:
         keyframe_times = [idx / fps for idx in keyframe_indices]
         for i, (idx, time) in enumerate(zip(keyframe_indices, keyframe_times)):
@@ -137,7 +136,6 @@ def extract_keyframes(video_path: str,
     return keyframes
 
 
-# 设置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
