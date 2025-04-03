@@ -8,7 +8,6 @@ def calculate_accuracy(predictions: List[Dict]) -> Tuple[float, Dict[str, float]
     total_correct = 0
     total_count = len(predictions)  
     
-    # 用于存储每个类别的统计信息
     category_stats = defaultdict(lambda: {'correct': 0, 'total': 0})
     
     for pred in predictions:
@@ -29,12 +28,10 @@ def calculate_accuracy(predictions: List[Dict]) -> Tuple[float, Dict[str, float]
     return overall_accuracy, category_accuracy
 
 def main():
-    # 设置命令行参数
     parser = argparse.ArgumentParser(description='Evaluate result.')
     parser.add_argument('input_file', help='Path of input file')
     args = parser.parse_args()
     
-    # 读取JSON文件
     try:
         with open(args.input_file, 'r', encoding='utf-8') as f:
             predictions = json.load(f)
