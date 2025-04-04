@@ -1,14 +1,10 @@
-# MME-Unify: A Comprehensive Benchmark for Unified Multimodal Understanding and Generation
-
-<div align="center">
-  <img src="docs/logo.png" alt="MME-Unify Logo" height="60px" style="vertical-align: middle;">
-  <span style="font-size: 28px; vertical-align: middle;"> MME-Unify: A Comprehensive Benchmark for Unified Multimodal Understanding and Generation</span>
-</div>
+# <img src="docs/logo.png" alt="Logo" height="30" style="vertical-align: middle;"> MME-Unify: A Comprehensive Benchmark for Unified Multimodal Understanding and Generation
 
 <font size=7><div align='center' >  
 [[📖 arXiv Paper](https://arxiv.org/abs/2502.10391)] 
 [[📊 MME-Unify Data](https://huggingface.co/datasets/wulin222/MME-Unify)] 
 [[📝 Homepage](https://mme-unify.github.io/)] 
+
 </div></font>
 
 **[2025/02/10]** 🔥 We are proud to open-source **MME-Unify**, a comprehensive evaluation framework designed to systematically assess U-MLLMs. Our benchmark includes:
