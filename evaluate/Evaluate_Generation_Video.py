@@ -361,7 +361,6 @@ class VideoMetricsCalculator:
             return float('inf')
 
     def calculate_fvd(self, real_features: np.ndarray, gen_features: np.ndarray) -> float:
-        # FVD计算与FID相同
         return self.calculate_fid(real_features, gen_features)
 
     def process_video_prediction(self, data: List[Dict], mp4_prefix: str) -> Dict:
