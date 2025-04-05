@@ -15,8 +15,8 @@ class ImageEvaluator:
     def __init__(self):
         self.device = "cuda:1" if torch.cuda.is_available() else "cpu"
         self.lpips_model = lpips.LPIPS(net='alex').to(self.device)
-        self.clip_model = CLIPModel.from_pretrained("/data/xwl/xwl_data/.cache/clip-vit-large-patch14").to(self.device)
-        self.clip_processor = CLIPProcessor.from_pretrained("/data/xwl/xwl_data/.cache/clip-vit-large-patch14")
+        self.clip_model = CLIPModel.from_pretrained("clip-vit-large-patch14").to(self.device)
+        self.clip_processor = CLIPProcessor.from_pretrained("clip-vit-large-patch14")
         self.base_path = "/data/xwl/xwl_data/decode_images"
         
     def load_and_preprocess_image(self, image_path: str, is_output: bool = False) -> torch.Tensor:
