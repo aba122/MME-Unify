@@ -807,10 +807,10 @@
         ],
         "answer": "A",
         "data": {
-            "image": "Common_Sense_Questions/Refrigerator.jpg",
-            "fake_image1": "Common_Sense_Questions/Refrigerator_negative1.jpg",
-            "fake_image2": "Common_Sense_Questions/Refrigerator_negative2.jpg",
-            "fake_image3": "Common_Sense_Questions/Refrigerator_negative3.jpg"
+            "image": "Common_Sense_Questions/Washing Machine.jpg",
+            "fake_image1": "Common_Sense_Questions/Washing Machine_negative1.jpg",
+            "fake_image2": "Common_Sense_Questions/Washing Machine_negative2.jpg",
+            "fake_image3": "Common_Sense_Questions/Washing Machine_negative3.jpg"
         },
         "category": "Uinfy_capability",
         "subcategory": "Common_Sense_Question",
