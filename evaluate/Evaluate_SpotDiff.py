@@ -8,7 +8,6 @@ from transformers import CLIPProcessor, CLIPModel
 import argparse
 
 def load_image(image_path: str) -> Optional[Image.Image]:
-    """Load an image from path and convert to RGB."""
     try:
         image = Image.open(image_path).convert('RGB')
         return image
@@ -17,7 +16,6 @@ def load_image(image_path: str) -> Optional[Image.Image]:
         return None
 
 def calculate_clip_similarity(model, processor, image1_path: str, image2_path: str) -> float:
-    """Calculate CLIP similarity between two images."""
     try:
         image1 = load_image(image1_path)
         image2 = load_image(image2_path)
@@ -46,10 +44,7 @@ def calculate_clip_similarity(model, processor, image1_path: str, image2_path: s
         return 0.0
 
 def evaluate_text_answer(item: Dict) -> Tuple[bool, bool]:
-    """
-    Evaluate text answer for a single item.
-    Returns: (is_valid, is_correct)
-    """
+
     if 'output' not in item or not isinstance(item['output'], dict):
         return False, False
         
@@ -66,10 +61,7 @@ def evaluate_text_answer(item: Dict) -> Tuple[bool, bool]:
     return True, prediction.strip() == ground_truth
 
 def evaluate_image_prediction(item: Dict, model, processor, base_path: str) -> Tuple[bool, bool]:
-    """
-    Evaluate image prediction for a single item.
-    Returns: (is_valid, is_correct)
-    """
+
     if 'output' not in item or not isinstance(item['output'], dict):
         return False, False
         
@@ -108,9 +100,7 @@ def evaluate_image_prediction(item: Dict, model, processor, base_path: str) -> T
     return False, False
 
 def evaluate_results(input_json: str, base_path: str) -> Dict:
-    """
-    Evaluate text answers and image predictions, including combined accuracy.
-    """
+    
     print("Loading CLIP model...")
     model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
     processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
