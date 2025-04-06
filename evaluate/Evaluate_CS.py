@@ -74,21 +74,21 @@ def evaluate_results(args):
     metrics = {
         'text': {
             'total': total_samples,
-            'attempted': 0,  # number of samples where text answer was provided
-            'skipped': 0,    # number of samples where text answer was missing
-            'correct': 0     # number of correct text answers
+            'attempted': 0, 
+            'skipped': 0,    
+            'correct': 0   
         },
         'image': {
             'total': total_samples,
-            'attempted': 0,  # number of samples where image was generated
-            'skipped': 0,    # number of samples where image was missing
-            'correct': 0     # number of correct image predictions
+            'attempted': 0,  
+            'skipped': 0,    
+            'correct': 0   
         },
         'combined': {
             'total': total_samples,
-            'attempted': 0,  # number of samples where both text and image were attempted
-            'skipped': 0,    # number of samples where either text or image was missing
-            'correct': 0     # number of samples where both were correct
+            'attempted': 0,  
+            'skipped': 0,    
+            'correct': 0   
         }
     }
 
